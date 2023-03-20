@@ -85,7 +85,7 @@ def compute_gen_metrics(eval_preds, tokenizer):
     pred_file = os.path.join(ROOT_FOLDER, 'preds.txt')
 
     with open(label_file, 'w') as f:
-        f.write('\n'.join(json.dumps({'code': label}) for label in decoded_labels))
+        f.write('\n'.join(json.dumps({'code': label[0]}) for label in decoded_labels))
 
     with open(pred_file, 'w') as f:
         f.write('\n'.join(decoded_preds))
