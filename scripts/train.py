@@ -114,7 +114,7 @@ def main(
     ds = load_dataset('code_x_glue_tc_text_to_code')
     ds_train = ds['train'].train_test_split(test_size=0.15, seed=SEED)
 
-    ds = preprocess_dataset(ds, tokenizer)
+    ds_train = preprocess_dataset(ds_train, tokenizer)
     data_collator = DataCollatorForSeq2Seq(
         tokenizer,
         model=model,

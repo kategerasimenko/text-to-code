@@ -30,6 +30,7 @@ ROOT_FOLDER = str(Path(__file__).parent.parent)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 N_BEAMS = 3
+MAX_SEQ_LEN = 512
 GENERATION_LEN = 512
 LABEL_PAD_TOKEN_ID = -100
 
@@ -39,6 +40,14 @@ def compute_test_metrics(pred_file, dataset_file, model_dir, data_part):
     result = {'bleu': bleu, 'match': em}
     with open(model_dir / f'scores_{data_part}.json', 'w') as f:
         json.dump(result, f, indent=2)
+
+
+def preprocess_dataset(ds, tokenizer):
+    def process(examples):
+        return tokenizer(examples['nl'], max_length=MAX_SEQ_LEN, truncation=True)
+
+    ds = ds.map(process, batched=True)
+    return ds
 
 
 def run_prediction(dataset, model, tokenizer, model_dir, batch_size, data_part, compute_metrics=True):
@@ -51,7 +60,8 @@ def run_prediction(dataset, model, tokenizer, model_dir, batch_size, data_part, 
         # pad_to_multiple_of=8
     )
 
-    tokens = dataset.remove_columns(['nl', 'id', 'code', 'labels'])  # a bit of hardcoding
+    dataset = preprocess_dataset(dataset, tokenizer)
+    tokens = dataset.remove_columns(['nl', 'id', 'code'])  # a bit of hardcoding
     test_dataloader = DataLoader(tokens, batch_size=batch_size, collate_fn=collator)
 
     all_preds = []
