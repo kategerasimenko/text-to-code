@@ -14,6 +14,7 @@ from transformers import (
     Seq2SeqTrainer, EarlyStoppingCallback
 )
 
+from predict import run_prediction
 from evaluator.evaluator import (
     evaluate as benchmark_evaluate
 )
@@ -55,7 +56,7 @@ def postprocess_text(preds, labels):
     return preds, labels
 
 
-def compute_gen_metrics(eval_preds, tokenizer):
+def compute_gen_metrics(eval_preds, tokenizer, model_ckpt_dir):
     preds, labels = eval_preds
     if isinstance(preds, tuple):
         preds = preds[0]
@@ -81,8 +82,8 @@ def compute_gen_metrics(eval_preds, tokenizer):
     #     'match': sum(p == ls[0] for p, ls in zip(decoded_preds, decoded_labels)) / len(decoded_labels)
     # }
 
-    label_file = os.path.join(ROOT_FOLDER, 'temp_gold.jsonl')
-    pred_file = os.path.join(ROOT_FOLDER, 'preds.txt')
+    label_file = os.path.join(model_ckpt_dir, 'temp_gold.jsonl')
+    pred_file = os.path.join(model_ckpt_dir, 'preds.txt')
 
     with open(label_file, 'w') as f:
         f.write('\n'.join(json.dumps({'code': label[0]}) for label in decoded_labels))
@@ -105,11 +106,14 @@ def main(
 ):
     model_name = f'T2C_{base_model.rsplit("/", 1)[-1]}_{learning_rate}lr_{max_epochs}epochs'
     model_save_dir = os.path.join(ROOT_FOLDER, 'models', model_name)
+    model_ckpt_dir = os.path.join(ROOT_FOLDER, 'checkpoints', model_name)
 
     model = AutoModelForSeq2SeqLM.from_pretrained(base_model)
     tokenizer = AutoTokenizer.from_pretrained(base_model)
 
     ds = load_dataset('code_x_glue_tc_text_to_code')
+    ds_train = ds['train'].train_test_split(test_size=0.15, seed=SEED)
+
     ds = preprocess_dataset(ds, tokenizer)
     data_collator = DataCollatorForSeq2Seq(
         tokenizer,
@@ -119,10 +123,10 @@ def main(
     )
 
     def compute_dev_metrics(eval_preds):
-        return compute_gen_metrics(eval_preds, tokenizer)
+        return compute_gen_metrics(eval_preds, tokenizer, model_ckpt_dir)
 
     training_args = Seq2SeqTrainingArguments(
-        output_dir=os.path.join(ROOT_FOLDER, 'checkpoints', model_name),
+        output_dir=model_ckpt_dir,
         report_to='none',
         evaluation_strategy='epoch',
         per_device_train_batch_size=batch_size,
@@ -146,8 +150,8 @@ def main(
     trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
-        train_dataset=ds['train'],
-        eval_dataset=ds['validation'],
+        train_dataset=ds_train['train'],
+        eval_dataset=ds_train['test'],
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_dev_metrics,
@@ -158,6 +162,17 @@ def main(
 
     trainer.train()
     trainer.save_model(os.path.join(model_save_dir, 'model'))
+
+    test_part = 'validation'
+    run_prediction(
+        dataset=ds[test_part],
+        model=trainer.model,
+        tokenizer=tokenizer,
+        model_dir=model_save_dir,
+        batch_size=batch_size,
+        data_part=test_part,
+        compute_metrics=True
+    )
 
 
 if __name__ == '__main__':
