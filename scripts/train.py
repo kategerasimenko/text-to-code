@@ -95,7 +95,7 @@ def main(
         tokenizer,
         model=model,
         label_pad_token_id=LABEL_PAD_TOKEN_ID,
-        pad_to_multiple_of=8
+        # pad_to_multiple_of=8
     )
 
     def compute_dev_metrics(eval_preds):
@@ -137,7 +137,7 @@ def main(
     )
 
     trainer.train()
-    trainer.save_model(str(model_save_dir / 'model'))
+    trainer.save_model(os.path.join(model_save_dir, 'model'))
 
 
 if __name__ == '__main__':
