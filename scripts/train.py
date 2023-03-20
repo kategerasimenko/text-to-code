@@ -90,7 +90,7 @@ def compute_gen_metrics(eval_preds, tokenizer):
     with open(pred_file, 'w') as f:
         f.write('\n'.join(decoded_preds))
 
-    bleu, em = benchmark_evaluate(label_file, pred_file)
+    bleu, em = benchmark_evaluate(pred_file, label_file)
     result = {'bleu': bleu, 'match': em}
 
     return result
