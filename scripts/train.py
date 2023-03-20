@@ -14,7 +14,7 @@ from transformers import (
     Seq2SeqTrainer, EarlyStoppingCallback
 )
 
-from .evaluator.evaluator import (
+from evaluator.evaluator import (
     evaluate as benchmark_evaluate
 )
 

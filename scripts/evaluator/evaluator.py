@@ -3,7 +3,7 @@
 import os
 import logging
 import argparse
-from .bleu import _bleu
+from evaluator.bleu import _bleu
 import json
 
 logger = logging.getLogger(__name__)
