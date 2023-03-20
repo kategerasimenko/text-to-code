@@ -1,4 +1,5 @@
 import os
+import json
 import random
 from pathlib import Path
 
@@ -11,6 +12,10 @@ from transformers import (
     AutoModelForSeq2SeqLM, AutoTokenizer,
     DataCollatorForSeq2Seq, Seq2SeqTrainingArguments,
     Seq2SeqTrainer, EarlyStoppingCallback
+)
+
+from .evaluator.evaluator import (
+    evaluate as benchmark_evaluate
 )
 
 
@@ -69,10 +74,25 @@ def compute_gen_metrics(eval_preds, tokenizer):
 
     # Some simple post-processing
     decoded_preds, decoded_labels = postprocess_text(decoded_preds, decoded_labels)
-    
-    result = {}
-    result['bleu'] = DEV_METRIC.compute(predictions=decoded_preds, references=decoded_labels)['score']
-    result['match'] = sum(p == ls[0] for p, ls in zip(decoded_preds, decoded_labels)) / len(decoded_labels)
+
+    # these were metrics inherent to HF Trainer setup, but the benchmark has different evaluation code
+    # result = {
+    #     'bleu': DEV_METRIC.compute(predictions=decoded_preds, references=decoded_labels)['score'],
+    #     'match': sum(p == ls[0] for p, ls in zip(decoded_preds, decoded_labels)) / len(decoded_labels)
+    # }
+
+    label_file = os.path.join(ROOT_FOLDER, 'temp_gold.jsonl')
+    pred_file = os.path.join(ROOT_FOLDER, 'preds.txt')
+
+    with open(label_file, 'w') as f:
+        f.write('\n'.join(json.dumps({'code': label}) for label in decoded_labels))
+
+    with open(pred_file, 'w') as f:
+        f.write('\n'.join(decoded_preds))
+
+    bleu, em = benchmark_evaluate(label_file, pred_file)
+    result = {'bleu': bleu, 'match': em}
+
     return result
 
 
