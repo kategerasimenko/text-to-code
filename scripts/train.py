@@ -111,7 +111,7 @@ def main(
     model = AutoModelForSeq2SeqLM.from_pretrained(base_model)
     tokenizer = AutoTokenizer.from_pretrained(base_model)
     if model.startswith('t5-'):
-        tokenizer.add_tokens(['{', '}'], special_tokens=False)
+        tokenizer.add_tokens(['\x00', '~', '^', '}', '<', '`', '{'], special_tokens=False)
         new_num_tokens = len(tokenizer)
         model.resize_token_embeddings(new_num_tokens)
 
