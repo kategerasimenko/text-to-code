@@ -110,20 +110,18 @@ def main(
 
     model = AutoModelForSeq2SeqLM.from_pretrained(base_model)
     tokenizer = AutoTokenizer.from_pretrained(base_model)
-    if model.startswith('t5-'):
+    if base_model.startswith('t5-'):
         tokenizer.add_tokens(['\x00', '~', '^', '}', '<', '`', '{'], special_tokens=False)
         new_num_tokens = len(tokenizer)
         model.resize_token_embeddings(new_num_tokens)
 
     ds = load_dataset('code_x_glue_tc_text_to_code')
-    ds_train = ds['train'].train_test_split(test_size=0.02, seed=SEED)
 
-    ds_train = preprocess_dataset(ds_train, tokenizer)
+    ds_for_train = preprocess_dataset(ds, tokenizer)
     data_collator = DataCollatorForSeq2Seq(
         tokenizer,
         model=model,
-        label_pad_token_id=LABEL_PAD_TOKEN_ID,
-        # pad_to_multiple_of=8
+        label_pad_token_id=LABEL_PAD_TOKEN_ID
     )
 
     def compute_dev_metrics(eval_preds):
@@ -144,17 +142,14 @@ def main(
         generation_num_beams=N_BEAMS,
         metric_for_best_model='eval_bleu',
         greater_is_better=True,
-        load_best_model_at_end=True,
-        # no_cuda=not IS_CUDA_AVAILABLE,
-        # fp16=IS_CUDA_AVAILABLE,
-        # fp16_full_eval=IS_CUDA_AVAILABLE,
+        load_best_model_at_end=True
     )
 
     trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
-        train_dataset=ds_train['train'],
-        eval_dataset=ds_train['test'],
+        train_dataset=ds_for_train['train'],
+        eval_dataset=ds_for_train['validation'],
         tokenizer=tokenizer,
         data_collator=data_collator,
         compute_metrics=compute_dev_metrics,

@@ -1,3 +1,4 @@
+import os
 import json
 import random
 from pathlib import Path
@@ -38,7 +39,7 @@ LABEL_PAD_TOKEN_ID = -100
 def compute_test_metrics(pred_file, dataset_file, model_dir, data_part):
     bleu, em = benchmark_evaluate(pred_file, dataset_file)
     result = {'bleu': bleu, 'match': em}
-    with open(model_dir / f'scores_{data_part}.json', 'w') as f:
+    with open(os.path.join(model_dir, f'scores_{data_part}.json'), 'w') as f:
         json.dump(result, f, indent=2)
 
 
@@ -56,8 +57,7 @@ def run_prediction(dataset, model, tokenizer, model_dir, batch_size, data_part, 
     collator = DataCollatorForSeq2Seq(
         tokenizer,
         model=model,
-        label_pad_token_id=LABEL_PAD_TOKEN_ID,
-        # pad_to_multiple_of=8
+        label_pad_token_id=LABEL_PAD_TOKEN_ID
     )
 
     dataset = preprocess_dataset(dataset, tokenizer)
@@ -77,15 +77,15 @@ def run_prediction(dataset, model, tokenizer, model_dir, batch_size, data_part, 
             )
             all_preds.extend(decoded_preds)
 
-    with open(model_dir / f'predictions_{data_part}.txt', 'w') as f:
+    with open(os.path.join(model_dir, f'predictions_{data_part}.txt'), 'w') as f:
         f.write('\n'.join(all_preds))
 
     if compute_metrics:
-        dataset.to_json(model_dir / f'labels_{data_part}.jsonl')
+        dataset.to_json(os.path.join(model_dir, f'labels_{data_part}.jsonl'))
 
         compute_test_metrics(
-            dataset_file=str(model_dir / f'labels_{data_part}.jsonl'),
-            pred_file=str(model_dir / f'predictions_{data_part}.txt'),
+            dataset_file=os.path.join(model_dir, f'labels_{data_part}.jsonl'),
+            pred_file=os.path.join(model_dir, f'predictions_{data_part}.txt'),
             model_dir=model_dir,
             data_part=data_part
         )
@@ -97,8 +97,7 @@ def run_test_prediction(
         model_dir: str = typer.Option(..., help='Path to model for inference'),
         batch_size: int = typer.Option(32, help='Batch size'),
 ):
-    model_dir = Path(model_dir)
-    path_to_model = str(model_dir / 'model')
+    path_to_model = os.path.join(model_dir, 'model')
     model = AutoModelForSeq2SeqLM.from_pretrained(path_to_model).to(DEVICE)
     tokenizer = AutoTokenizer.from_pretrained(path_to_model)
 
