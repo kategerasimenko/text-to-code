@@ -110,6 +110,10 @@ def main(
 
     model = AutoModelForSeq2SeqLM.from_pretrained(base_model)
     tokenizer = AutoTokenizer.from_pretrained(base_model)
+    if model.startswith('t5-'):
+        tokenizer.add_tokens(['{', '}'], special_tokens=False)
+        new_num_tokens = len(tokenizer)
+        model.resize_token_embeddings(new_num_tokens)
 
     ds = load_dataset('code_x_glue_tc_text_to_code')
     ds_train = ds['train'].train_test_split(test_size=0.02, seed=SEED)
