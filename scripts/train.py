@@ -51,7 +51,7 @@ def preprocess_dataset(ds, tokenizer):
 
 
 def postprocess_text(preds, labels):
-    preds = [pred.strip() for pred in preds]
+    preds = [pred.replace('\n', ' ').strip() for pred in preds]
     labels = [[label.strip()] for label in labels]
     return preds, labels
 
