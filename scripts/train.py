@@ -112,7 +112,7 @@ def main(
     tokenizer = AutoTokenizer.from_pretrained(base_model)
 
     ds = load_dataset('code_x_glue_tc_text_to_code')
-    ds_train = ds['train'].train_test_split(test_size=0.15, seed=SEED)
+    ds_train = ds['train'].train_test_split(test_size=0.02, seed=SEED)
 
     ds_train = preprocess_dataset(ds_train, tokenizer)
     data_collator = DataCollatorForSeq2Seq(
@@ -144,7 +144,6 @@ def main(
         # no_cuda=not IS_CUDA_AVAILABLE,
         # fp16=IS_CUDA_AVAILABLE,
         # fp16_full_eval=IS_CUDA_AVAILABLE,
-
     )
 
     trainer = Seq2SeqTrainer(
