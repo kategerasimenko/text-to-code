@@ -31,7 +31,6 @@ ROOT_FOLDER = str(Path(__file__).parent.parent)
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 N_BEAMS = 3
-MAX_SEQ_LEN = 512
 GENERATION_LEN = 512
 LABEL_PAD_TOKEN_ID = -100
 
@@ -43,15 +42,15 @@ def compute_test_metrics(pred_file, dataset_file, model_dir, data_part):
         json.dump(result, f, indent=2)
 
 
-def preprocess_dataset(ds, tokenizer):
+def preprocess_dataset(ds, tokenizer, max_seq_len):
     def process(examples):
-        return tokenizer(examples['nl'], max_length=MAX_SEQ_LEN, truncation=True)
+        return tokenizer(examples['nl'], max_length=max_seq_len, truncation=True)
 
     ds = ds.map(process, batched=True)
     return ds
 
 
-def run_prediction(dataset, model, tokenizer, model_dir, batch_size, data_part, compute_metrics=True):
+def run_prediction(dataset, model, tokenizer, model_dir, batch_size, data_part, max_seq_len, compute_metrics=True):
     model.eval()
 
     collator = DataCollatorForSeq2Seq(
@@ -60,7 +59,7 @@ def run_prediction(dataset, model, tokenizer, model_dir, batch_size, data_part, 
         label_pad_token_id=LABEL_PAD_TOKEN_ID
     )
 
-    dataset = preprocess_dataset(dataset, tokenizer)
+    dataset = preprocess_dataset(dataset, tokenizer, max_seq_len)
     tokens = dataset.remove_columns(['nl', 'id', 'code'])  # a bit of hardcoding
     test_dataloader = DataLoader(tokens, batch_size=batch_size, collate_fn=collator)
 
@@ -102,6 +101,8 @@ def run_test_prediction(
     tokenizer = AutoTokenizer.from_pretrained(path_to_model)
 
     ds = load_dataset('code_x_glue_tc_text_to_code', split=data_part)
+    max_seq_len = 1024 if 'byt5-' in model_dir else 512  # workaround
+    print('max seq len', max_seq_len)
 
     run_prediction(
         ds,
@@ -110,6 +111,7 @@ def run_test_prediction(
         model_dir,
         batch_size=batch_size,
         data_part=data_part,
+        max_seq_len=max_seq_len,
         compute_metrics=True
     )
 

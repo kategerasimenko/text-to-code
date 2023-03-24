@@ -30,19 +30,18 @@ app = typer.Typer(add_completion=False)
 
 ROOT_FOLDER = str(Path(__file__).parent.parent)
 
-MAX_SEQ_LEN = 512
 LABEL_PAD_TOKEN_ID = -100
-GENERATION_LEN = MAX_SEQ_LEN
+GENERATION_LEN = 512
 N_BEAMS = 3
 
 DEV_METRIC = evaluate.load("sacrebleu")
 IS_CUDA_AVAILABLE = torch.cuda.is_available()
 
 
-def preprocess_dataset(ds, tokenizer):
+def preprocess_dataset(ds, tokenizer, max_seq_len):
     def process(examples):
-        model_inputs = tokenizer(examples['nl'], max_length=MAX_SEQ_LEN, truncation=True)
-        labels = tokenizer(examples['code'], max_length=MAX_SEQ_LEN, truncation=True)
+        model_inputs = tokenizer(examples['nl'], max_length=max_seq_len, truncation=True)
+        labels = tokenizer(examples['code'], max_length=max_seq_len, truncation=True)
         model_inputs['labels'] = labels['input_ids']
         return model_inputs
 
@@ -112,12 +111,15 @@ def main(
     tokenizer = AutoTokenizer.from_pretrained(base_model)
     if base_model.startswith('t5-'):
         tokenizer.add_tokens(['\x00', '~', '^', '}', '<', '`', '{'], special_tokens=False)
-        new_num_tokens = len(tokenizer)
-        model.resize_token_embeddings(new_num_tokens)
+
+    tokenizer.add_tokens(['concode_elem_sep', 'concode_field_sep'])
+    model.resize_token_embeddings(len(tokenizer))
 
     ds = load_dataset('code_x_glue_tc_text_to_code')
 
-    ds_for_train = preprocess_dataset(ds, tokenizer)
+    max_seq_len = 1024 if 'byt5-' in base_model else 512
+    print('max seq len', max_seq_len)
+    ds_for_train = preprocess_dataset(ds, tokenizer, max_seq_len)
     data_collator = DataCollatorForSeq2Seq(
         tokenizer,
         model=model,
@@ -169,6 +171,7 @@ def main(
         model_dir=model_save_dir,
         batch_size=batch_size,
         data_part=test_part,
+        max_seq_len=max_seq_len,
         compute_metrics=True
     )
 
