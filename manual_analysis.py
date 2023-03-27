@@ -22,8 +22,8 @@ for label, pred in selected:
 
 print('total errors', len(errors))
 
-shorter = sum(1 for label, pred in zip(labels, preds) if len(pred) <= len(label) / 3)
+shorter = sum(1 for label, pred in errors if len(pred) <= len(label) / 3)
 print('3x shorter seqs', shorter, round(shorter / len(errors), 3))
 
-loops = sum(1 for label, pred in zip(labels, preds) if len(pred) == 511)
+loops = sum(1 for label, pred in errors if pred != label and len(pred) == 511)
 print('loops', loops, round(loops / len(errors), 3))

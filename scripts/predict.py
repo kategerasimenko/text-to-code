@@ -31,6 +31,9 @@ prediction_app = typer.Typer(add_completion=False)
 
 
 def compute_test_metrics(pred_file, dataset_file, model_dir, data_part):
+    """
+    Evaluate preds with benchmark and save scores to file.
+    """
     bleu, em = benchmark_evaluate(pred_file, dataset_file)
     result = {'bleu': bleu, 'match': em}
     with open(os.path.join(model_dir, f'scores_{data_part}.json'), 'w') as f:
@@ -38,6 +41,9 @@ def compute_test_metrics(pred_file, dataset_file, model_dir, data_part):
 
 
 def preprocess_dataset(ds, tokenizer, max_seq_len):
+    """
+    Tokenize input for prediction.
+    """
     def process(examples):
         return tokenizer(examples['nl'], max_length=max_seq_len, truncation=True)
 
@@ -46,8 +52,12 @@ def preprocess_dataset(ds, tokenizer, max_seq_len):
 
 
 def run_prediction(dataset, model, tokenizer, model_dir, batch_size, data_part, max_seq_len, compute_metrics=True):
+    """
+    Run prediction (generation), save predictions, and calculate metrics.
+    """
     model.eval()
 
+    # data collator which pads inputs on the go based on max length inside the batch
     collator = DataCollatorForSeq2Seq(
         tokenizer,
         model=model,
