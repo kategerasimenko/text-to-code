@@ -1,19 +1,21 @@
 import os
 import json
 import random
-from pathlib import Path
 
 import typer
 import torch
 import numpy as np
 from tqdm import tqdm
-from datasets import load_dataset
 from torch.utils.data import DataLoader
 from transformers import (
     AutoModelForSeq2SeqLM, AutoTokenizer,
     DataCollatorForSeq2Seq
 )
 
+from config import (
+    DEVICE, LABEL_PAD_TOKEN_ID,
+    GENERATION_LEN, N_BEAMS
+)
 from evaluator.evaluator import (
     evaluate as benchmark_evaluate
 )
@@ -26,13 +28,6 @@ torch.manual_seed(SEED)
 torch.backends.cudnn.deterministic = True
 
 prediction_app = typer.Typer(add_completion=False)
-
-ROOT_FOLDER = str(Path(__file__).parent.parent)
-DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-N_BEAMS = 3
-GENERATION_LEN = 512
-LABEL_PAD_TOKEN_ID = -100
 
 
 def compute_test_metrics(pred_file, dataset_file, model_dir, data_part):
@@ -88,33 +83,3 @@ def run_prediction(dataset, model, tokenizer, model_dir, batch_size, data_part, 
             model_dir=model_dir,
             data_part=data_part
         )
-
-
-@prediction_app.command()
-def run_test_prediction(
-        data_part: str = typer.Option('validation', help='Data part to predict on'),
-        model_dir: str = typer.Option(..., help='Path to model for inference'),
-        batch_size: int = typer.Option(32, help='Batch size'),
-):
-    path_to_model = os.path.join(model_dir, 'model')
-    model = AutoModelForSeq2SeqLM.from_pretrained(path_to_model).to(DEVICE)
-    tokenizer = AutoTokenizer.from_pretrained(path_to_model)
-
-    ds = load_dataset('code_x_glue_tc_text_to_code', split=data_part)
-    max_seq_len = 1024 if 'byt5-' in model_dir else 512  # workaround
-    print('max seq len', max_seq_len)
-
-    run_prediction(
-        ds,
-        model,
-        tokenizer,
-        model_dir,
-        batch_size=batch_size,
-        data_part=data_part,
-        max_seq_len=max_seq_len,
-        compute_metrics=True
-    )
-
-
-if __name__ == '__main__':
-    prediction_app()
