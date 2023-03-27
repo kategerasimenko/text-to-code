@@ -12,10 +12,7 @@ from transformers import (
     DataCollatorForSeq2Seq
 )
 
-from config import (
-    DEVICE, LABEL_PAD_TOKEN_ID,
-    GENERATION_LEN, N_BEAMS
-)
+from config import DEVICE, GENERATION_LEN, N_BEAMS
 from evaluator.evaluator import (
     evaluate as benchmark_evaluate
 )
@@ -58,11 +55,7 @@ def run_prediction(dataset, model, tokenizer, model_dir, batch_size, data_part, 
     model.eval()
 
     # data collator which pads inputs on the go based on max length inside the batch
-    collator = DataCollatorForSeq2Seq(
-        tokenizer,
-        model=model,
-        label_pad_token_id=LABEL_PAD_TOKEN_ID
-    )
+    collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
     dataset = preprocess_dataset(dataset, tokenizer, max_seq_len)
     tokens = dataset.remove_columns(['nl', 'id', 'code'])  # a bit of hardcoding
