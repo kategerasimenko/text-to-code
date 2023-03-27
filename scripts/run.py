@@ -159,8 +159,8 @@ def main(
     if do_predict:
         test_part = 'validation'
 
-        model = AutoModelForSeq2SeqLM.from_pretrained(model_save_dir).to(DEVICE)
-        tokenizer = AutoTokenizer.from_pretrained(model_save_dir)
+        model = AutoModelForSeq2SeqLM.from_pretrained(os.path.join(model_save_dir, 'model')).to(DEVICE)
+        tokenizer = AutoTokenizer.from_pretrained(os.path.join(model_save_dir, 'model'))
 
         run_prediction(
             dataset=ds[test_part],
